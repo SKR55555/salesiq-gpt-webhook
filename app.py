@@ -4,35 +4,43 @@ import os
 
 app = Flask(__name__)
 
-# Load OpenAI API Key from Render environment variables
+# Load OpenAI API key from Render environment variables
 API_KEY = os.getenv("OPENAI_API_KEY")
-openai.api_key = API_KEY  # Set OpenAI API key
+openai.api_key = API_KEY
 
 @app.route('/salesiq-webhook', methods=['POST', 'HEAD'])
 def salesiq_webhook():
+    # Handle HEAD request (SalesIQ validation)
     if request.method == 'HEAD':
-        return '', 200  # ✅ Respond 200 for HEAD requests
+        return '', 200  # Respond with 200 OK for webhook activation
 
     try:
-        data = request.json  # Get JSON from SalesIQ request
-        user_message = data.get("visitor_question", "Hello!")  # Extract question
-        
-        # Generate response using OpenAI GPT
-        response = openai.ChatCompletion.create(
+        # Get the JSON data from SalesIQ webhook
+        data = request.json  
+        user_message = data.get("visitor_question", "Hello!")
+
+        # Debugging: Log received data
+        print(f"Received question: {user_message}")
+
+        # Call OpenAI GPT API
+        response = openai.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful chatbot."},
+                {"role": "system", "content": "You are a helpful chatbot that provides support."},
                 {"role": "user", "content": user_message}
             ]
         )
-        
-        # Extract response text
-        bot_reply = response["choices"][0]["message"]["content"]
 
-        # Return response in the correct format for SalesIQ
+        # Extract chatbot reply
+        bot_reply = response.choices[0].message.content
+
+        # Debugging: Log OpenAI response
+        print(f"Bot Reply: {bot_reply}")
+
         return jsonify({"reply": bot_reply})
 
     except Exception as e:
+        print(f"Error: {str(e)}")  # Log error
         return jsonify({"reply": "I am experiencing issues. Please try again later."})
 
 if __name__ == '__main__':
