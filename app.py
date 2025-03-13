@@ -35,3 +35,19 @@ def salesiq_webhook():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
+
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.route('/webhook', methods=['POST'])  # 👈 Make sure this includes 'POST'
+def webhook():
+    data = request.get_json()
+    if not data or 'question' not in data:
+        return jsonify({"error": "Invalid request"}), 400
+
+    question = data['question']
+    return jsonify({"reply": f"You asked: {question}"})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
