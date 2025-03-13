@@ -4,33 +4,36 @@ import os
 
 app = Flask(__name__)
 
-# Load OpenAI API Key from environment variables
-openai.api_key = os.getenv("OPENAI_API_KEY")  
+# Load OpenAI API Key from Render environment variables
+API_KEY = os.getenv("OPENAI_API_KEY")
+openai.api_key = API_KEY  # Set OpenAI API key
 
-@app.route('/salesiq-webhook', methods=['POST'])
+@app.route('/salesiq-webhook', methods=['POST', 'HEAD'])
 def salesiq_webhook():
-    try:
-        # Get the JSON data from Zoho SalesIQ webhook request
-        data = request.json  
-        user_message = data.get("visitor_question", "Hello!")  
+    if request.method == 'HEAD':
+        return '', 200  # ✅ Respond 200 for HEAD requests
 
-        # Call OpenAI GPT with the user message
-        response = openai.chat.completions.create(
-            model="gpt-4",  # Change to 'gpt-3.5-turbo' if needed
+    try:
+        data = request.json  # Get JSON from SalesIQ request
+        user_message = data.get("visitor_question", "Hello!")  # Extract question
+        
+        # Generate response using OpenAI GPT
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful chatbot that provides support."},
+                {"role": "system", "content": "You are a helpful chatbot."},
                 {"role": "user", "content": user_message}
             ]
         )
+        
+        # Extract response text
+        bot_reply = response["choices"][0]["message"]["content"]
 
-        # Extract response
-        bot_reply = response.choices[0].message.content
-
-        # Return the response to Zoho SalesIQ
+        # Return response in the correct format for SalesIQ
         return jsonify({"reply": bot_reply})
 
     except Exception as e:
-        return jsonify({"reply": f"Error: {str(e)}"}), 500
+        return jsonify({"reply": "I am experiencing issues. Please try again later."})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
